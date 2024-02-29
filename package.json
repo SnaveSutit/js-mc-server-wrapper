@@ -6,6 +6,7 @@
 		"blessed": "^0.1.81",
 		"chalk": "^5.3.0",
 		"minecraft-server-properties": "^1.0.0",
+		"rcon-client": "^4.2.4",
 		"tsx": "^4.7.1",
 		"typescript-rcon": "^0.1.0"
 	},

@@ -1,5 +1,6 @@
 import blessed from 'blessed'
 import { Server } from './server'
+import deathMessages from './minecraft/deathMessages'
 
 let SERVER: Server
 
@@ -17,7 +18,6 @@ const consoleInput = blessed.textbox({
 })
 
 const consoleLog = blessed.box({
-	content: 'Hello, World!',
 	bottom: 3,
 	scrollable: true,
 	tags: true,
@@ -53,7 +53,7 @@ function formatLog(data: string) {
 				logType = `{cyan-fg}${logType}{/cyan-fg}`
 				break
 		}
-		return `{gray-fg}{bold}${hour}:${minute}:${second} [{cyan-fg}${thread}{/cyan-fg}/${logType}]:{/bold}{/gray-fg} {${logColor}-fg}${log}{/}`
+		return `{gray-fg}{bold}[${hour}:${minute}:${second}] [{cyan-fg}${thread}{/cyan-fg}/${logType}]:{/bold}{/gray-fg} {${logColor}-fg}${log}{/}`
 	}
 
 	return data
@@ -92,21 +92,33 @@ async function main() {
 		})
 	})
 
+	consoleInput.key(['C-r'], () => {
+		if (SERVER.stopped) {
+			log('Restarting server...')
+			SERVER.start()
+		}
+	})
+
 	getInput()
 
 	SERVER = new Server({
 		root: './server',
 		autoRestart: true,
 		autoRestartDelay: 10000,
+		hardcoreButDeathEndsTheWorldMode: true,
 		onStart: (serverProcess) => {
 			serverProcess.on('exit', () => {
 				log('Server stopped!')
+				log('Press C-r to restart the server')
+				log('Press C-q to exit')
 			})
-			serverProcess.stderr!.on('data', (data) => {
-				log(data.toString().trim())
+			serverProcess.stderr!.on('data', (data: string) => {
+				const str = data.toString().trim()
+				log(str)
 			})
-			serverProcess.stdout!.on('data', (data) => {
-				log(data.toString().trim())
+			serverProcess.stdout!.on('data', (data: string) => {
+				const str = data.toString().trim()
+				log(str)
 			})
 		},
 	})

@@ -194,6 +194,13 @@ minecraft-server-properties@^1.0.0:
   resolved "https://registry.yarnpkg.com/minecraft-server-properties/-/minecraft-server-properties-1.0.0.tgz#90f28cae06d6d988423084a93d7687b59b0e60ba"
   integrity sha512-zjIAlAxL8j7Yv09tT3YHHHDFd43GLPdVsomEiQRSDRatpplGRmXakxaYYo/LzvASbIOOa58PUiZfttf96rp5Mw==
 
+rcon-client@^4.2.4:
+  version "4.2.4"
+  resolved "https://registry.yarnpkg.com/rcon-client/-/rcon-client-4.2.4.tgz#2582d16847063b47b4db9b517c6646ab3d5a3aae"
+  integrity sha512-sTHYLbcu2qrrOX4TOD3rvcLZNs7xiAhTsnZZIvxviSpa0yeV63sPAVI0PeScn5IvhKOCMURGt1NmnQ8h/GxjtA==
+  dependencies:
+    typed-emitter "^0.1.0"
+
 resolve-pkg-maps@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/resolve-pkg-maps/-/resolve-pkg-maps-1.0.0.tgz#616b3dc2c57056b5588c31cdf4b3d64db133720f"
@@ -208,6 +215,11 @@ tsx@^4.7.1:
     get-tsconfig "^4.7.2"
   optionalDependencies:
     fsevents "~2.3.3"
+
+typed-emitter@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/typed-emitter/-/typed-emitter-0.1.0.tgz#ca532f100ccbf850e3a73b8ebf43d43e4f1f3849"
+  integrity sha512-Tfay0l6gJMP5rkil8CzGbLthukn+9BN/VXWcABVFPjOoelJ+koW8BuPZYk+h/L+lEeIp1fSzVRiWRPIjKVjPdg==
 
 typescript-rcon@^0.1.0:
   version "0.1.0"
