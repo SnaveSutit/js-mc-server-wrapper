@@ -123,10 +123,10 @@ export class Server {
 				log('RCON is offline. Stopping death check...')
 				return
 			}
-			log('Checking for deaths...')
+			// log('Checking for deaths...')
 			this.rcon!.send('execute as @a if score @s deaths matches 1..')
 				.then((result) => {
-					console.log(`Result: ${result}`)
+					// console.log(`Result: ${result}`)
 					if (!result.includes('passed')) return
 					log('{red-fg}{bold}Death detected!{/bold}{/red-fg}')
 					clearInterval(intervalID)
