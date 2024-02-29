@@ -69,6 +69,7 @@ export class Server {
 				'scoreboard objectives add deaths deathCount\n',
 				'scoreboard objectives add health health\n',
 				'scoreboard objectives setdisplay list health\n',
+				'gamerule playersSleepingPercentage 1\n',
 			]
 			commands.forEach((c) => this.runCommand(c))
 		}
@@ -175,7 +176,7 @@ export class Server {
 				.catch((err) => {
 					log('Error while checking for deaths: ' + err)
 				})
-		}, 5000)
+		}, 15000)
 	}
 
 	private isRunning() {
