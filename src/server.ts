@@ -41,18 +41,21 @@ export class Server {
 			this.rconOnline = false
 
 			let startScript = process.platform === 'win32' ? 'start.bat' : 'start.sh'
-			this.serverProcess = childProcess.spawn(startScript, {
-				cwd: this.options.root,
-				stdio: 'pipe',
-			})
-
-			this.serverProcess.on('exit', () => {
-				this.stopped = true
-				this.rconOnline = false
-				this.serverProcess = undefined
-				if (!this.manuallyStopped && this.options.autoRestart) {
-				}
-			})
+			this.serverProcess = childProcess
+				.spawn(startScript, {
+					cwd: this.options.root,
+					stdio: 'pipe',
+				})
+				.on('error', (err) => {
+					log('Error while starting server: ' + err + '\n')
+				})
+				.on('exit', () => {
+					this.stopped = true
+					this.rconOnline = false
+					this.serverProcess = undefined
+					if (!this.manuallyStopped && this.options.autoRestart) {
+					}
+				})
 
 			this.serverProcess.stdout!.on('data', (data: string) => {
 				const str = data.toString().trim()
