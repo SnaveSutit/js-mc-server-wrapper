@@ -111,13 +111,15 @@ function watchForDeaths(server: OnlineMinecraftServer) {
 	let intervalID: NodeJS.Timeout
 
 	async function checkDeathCount() {
+		log('Checking for deaths...')
 		await server.rcon.send('scoreboard players set #hc.deathCount deaths 0')
 		await server.rcon.send('scoreboard players operation #hc.deathCount deaths > * deaths')
-		const result = await server.rcon.send('execute if score #count deaths matches 1..')
+		const result = await server.rcon.send('execute if score #hc.deathCount deaths matches 1..')
+		log('Death check result: ' + result)
 		if (!result.includes('passed')) return
 		clearInterval(intervalID)
 		server.rcon.send('title @a times 20 100 20')
-		server.rcon.send('title @a title {"text": "Death detected!","color":"red"}')
+		server.rcon.send('title @a title {"text": "Death Detected!","color":"red"}')
 		server.rcon.send(
 			'title @a subtitle {"text": "The server will reset in 10 seconds. Goodbye!","color":"red"}'
 		)
@@ -176,6 +178,7 @@ async function main() {
 			port: 25575,
 		},
 		onOnline: (server) => {
+			log('Server Online!')
 			server.runCommand([
 				'difficulty hard',
 				'scoreboard objectives add deaths deathCount',

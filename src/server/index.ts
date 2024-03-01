@@ -77,7 +77,12 @@ export class MinecraftServer {
 				stdio: 'pipe',
 				shell: true,
 			})
-			this.process.on('exit', this._onProcessExit).on('error', this._onProcessError)
+				.on('exit', (code) => {
+					this._onProcessExit(code || 0)
+				})
+				.on('error', (err) => {
+					this._onProcessError(err)
+				})
 			this.process!.stdout!.on('data', (data) => {
 				this._onProcesSTDout(data)
 			})
@@ -104,9 +109,15 @@ export class MinecraftServer {
 		})
 	}
 
-	public kill() {
-		if (!this.isOnline()) return
-		this.process?.kill('SIGKILL')
+	public async kill() {
+		if (!this.isOnline()) return Promise.reject('Server is already offline')
+		this.log('Killing server process...')
+		return new Promise<void>((resolve) => {
+			this.process!.on('exit', () => {
+				resolve()
+			})
+			this.process!.kill('SIGINT')
+		})
 	}
 
 	public isOnline() {
@@ -213,6 +224,9 @@ export class MinecraftServer {
 			this._serverRconOnline = true
 			this.log('Server-side RCON Online!')
 			void this._connectToRcon()
+		} else if (this._serverRconOnline && str.includes('Thread RCON Listener offline')) {
+			this._serverRconOnline = false
+			this.log('Server-side RCON Offline!')
 		}
 	}
 
