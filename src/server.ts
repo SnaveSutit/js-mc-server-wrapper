@@ -40,7 +40,7 @@ export class Server {
 
 			this.rconOnline = false
 
-			let startScript = process.platform === 'win32' ? 'start.bat' : 'start.sh'
+			let startScript = process.platform === 'win32' ? 'start.bat' : './start.sh'
 			this.serverProcess = childProcess
 				.spawn(startScript, {
 					cwd: this.options.root,
