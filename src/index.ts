@@ -171,7 +171,7 @@ async function main() {
 
 	getInput()
 
-	const startupScript = process.platform === 'win32' ? 'start.bat' : 'start.sh'
+	const startupScript = process.platform === 'win32' ? 'start.bat' : './start.sh'
 
 	SERVER = new MinecraftServer({
 		rootFolder: './server',
