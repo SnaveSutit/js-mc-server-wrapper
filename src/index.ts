@@ -1,8 +1,12 @@
+import fs from 'fs'
+import pathjs from 'path'
 import blessed from 'blessed'
-import { Server } from './server'
+import { getTimeFileName } from './util'
 import deathMessages from './minecraft/deathMessages'
+import { MinecraftServer, OnlineMinecraftServer } from './server'
+import zip from './7z'
 
-let SERVER: Server
+let SERVER: MinecraftServer
 
 const screen = blessed.screen({
 	smartCSR: true,
@@ -80,11 +84,65 @@ function getInput() {
 	}, 100)
 }
 
+async function resetWorld(server: MinecraftServer) {
+	log('Backing up World...')
+	const worldPath = pathjs.join(server.options.rootFolder, 'world')
+	const worldBackupPath = pathjs.join(
+		server.options.rootFolder,
+		'world-backups',
+		'world ' + getTimeFileName() + '.zip'
+	)
+	const worldBackupFolder = pathjs.dirname(worldBackupPath)
+	fs.mkdirSync(worldBackupFolder, { recursive: true })
+	await zip(worldBackupPath, worldPath)
+	const backups = await fs.promises.readdir(worldBackupFolder)
+	if (backups.length > 10) {
+		log('Too many backups. Deleting oldest backup...')
+		const oldestBackup = backups.sort()[0]
+		await fs.promises.rm(pathjs.join(worldBackupFolder, oldestBackup))
+	}
+	log('World backup complete. Erasing world...')
+	await fs.promises.rm(worldPath, { recursive: true, force: true })
+	log('World reset complete. Restarting server...')
+	server.start()
+}
+
+function watchForDeaths(server: OnlineMinecraftServer) {
+	let intervalID: NodeJS.Timeout
+
+	async function checkDeathCount() {
+		await server.rcon.send('scoreboard players set #hc.deathCount deaths 0')
+		await server.rcon.send('scoreboard players operation #hc.deathCount deaths > * deaths')
+		const result = await server.rcon.send('execute if score #count deaths matches 1..')
+		if (!result.includes('passed')) return
+		clearInterval(intervalID)
+		server.rcon.send('title @a times 20 100 20')
+		server.rcon.send('title @a title {"text": "Death detected!","color":"red"}')
+		server.rcon.send(
+			'title @a subtitle {"text": "The server will reset in 10 seconds. Goodbye!","color":"red"}'
+		)
+		setTimeout(async () => {
+			await server.stop()
+			await resetWorld(server).catch((err) => {
+				log('Error while resetting world: ' + err)
+			})
+		}, 10000)
+	}
+
+	intervalID = setInterval(async () => {
+		if (!server.isOnline() || !server.isRCONConnected()) {
+			clearInterval(intervalID)
+			log('Server is offline. Stopping death check...')
+		}
+		await checkDeathCount()
+	}, 15000)
+}
+
 async function main() {
 	screen.render()
 
 	consoleInput.key(['C-q'], () => {
-		if (SERVER.stopped) {
+		if (!SERVER.isOnline()) {
 			process.exit(0)
 		}
 		SERVER.stop().finally(() => {
@@ -93,42 +151,49 @@ async function main() {
 	})
 
 	consoleInput.key(['C-r'], () => {
-		if (SERVER.stopped) {
+		if (!SERVER.isOnline()) {
 			log('Restarting server...')
 			SERVER.start()
 		}
 	})
 
 	consoleInput.key(['escape'], () => {
-		SERVER.serverProcess?.kill('SIGINT')
+		SERVER.kill()
 		process.exit(0)
 	})
 
 	getInput()
 
-	SERVER = new Server({
-		root: './server',
+	const startupScript = process.platform === 'win32' ? 'start.bat' : 'start.sh'
+
+	SERVER = new MinecraftServer({
+		rootFolder: './server',
+		startupScript,
 		autoRestart: true,
 		autoRestartDelay: 10000,
-		hardcoreButDeathEndsTheWorldMode: true,
-		onStart: (serverProcess) => {
-			serverProcess.on('exit', () => {
-				log('Server stopped!')
-				log('Press C-r to restart the server')
-				log('Press C-q to exit')
-			})
-			serverProcess.stderr!.on('data', (data: string) => {
-				const str = data.toString().trim()
-				log(str)
-			})
-			serverProcess.stdout!.on('data', (data: string) => {
-				const str = data.toString().trim()
-				log(str)
-			})
+		rcon: {
+			password: Math.random().toString(36).substring(2),
+			port: 25575,
 		},
+		onOnline: (server) => {
+			server.runCommand([
+				'difficulty hard',
+				'scoreboard objectives add deaths deathCount',
+				'scoreboard objectives add health health',
+				'scoreboard objectives setdisplay list health',
+				'gamerule playersSleepingPercentage 1',
+			])
+			watchForDeaths(server)
+		},
+		onShutdown: () => {
+			log('Server stopped!')
+			log('Press C-r to restart the server')
+			log('Press C-q to exit')
+		},
+		log,
 	})
 
-	SERVER.start()
+	await SERVER.start()
 }
 
 void main().catch((e) => {
