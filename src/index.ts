@@ -99,6 +99,11 @@ async function main() {
 		}
 	})
 
+	consoleInput.key(['escape'], () => {
+		SERVER.serverProcess?.kill('SIGINT')
+		process.exit(0)
+	})
+
 	getInput()
 
 	SERVER = new Server({
