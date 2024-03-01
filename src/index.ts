@@ -118,7 +118,7 @@ function watchForDeaths(server: OnlineMinecraftServer) {
 		// log('Death check result: ' + result)
 		if (!result.includes('passed')) return
 		clearInterval(intervalID)
-		log('{red-fg}Death detected! Resetting server...{/ref-fg}')
+		log('{red-fg}{bold}Death detected! Resetting server...{/bold}{/red-fg}')
 		server.rcon.send('title @a times 20 100 20')
 		server.rcon.send('title @a title {"text": "Death Detected!","color":"red"}')
 		server.rcon.send(
