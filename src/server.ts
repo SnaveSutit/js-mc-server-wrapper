@@ -31,51 +31,54 @@ export class Server {
 
 	public start() {
 		if (this.isRunning()) return
-		this.stopped = false
-		this.manuallyStopped = false
+		try {
+			this.stopped = false
+			this.manuallyStopped = false
 
-		this.properties = this.readServerProperties()
-		this.configureRCON()
+			this.properties = this.readServerProperties()
+			this.configureRCON()
 
-		this.rconOnline = false
-
-		let startScript = process.platform === 'win32' ? 'start.bat' : 'start.sh'
-		this.serverProcess = childProcess.spawn(startScript, {
-			cwd: this.options.root,
-			stdio: 'pipe',
-		})
-
-		this.serverProcess.on('exit', () => {
-			this.stopped = true
 			this.rconOnline = false
-			this.serverProcess = undefined
-			if (!this.manuallyStopped && this.options.autoRestart) {
+
+			let startScript = process.platform === 'win32' ? 'start.bat' : 'start.sh'
+			this.serverProcess = childProcess.spawn(startScript, {
+				cwd: this.options.root,
+				stdio: 'pipe',
+			})
+
+			this.serverProcess.on('exit', () => {
+				this.stopped = true
+				this.rconOnline = false
+				this.serverProcess = undefined
+				if (!this.manuallyStopped && this.options.autoRestart) {
+				}
+			})
+
+			this.serverProcess.stdout!.on('data', (data: string) => {
+				const str = data.toString().trim()
+				if (!this.rconOnline && str.includes('Thread RCON Listener started')) {
+					this.rconOnline = true
+					log('Server-side RCON Online!')
+					this.connectToRcon()
+				}
+			})
+
+			if (this.options.hardcoreButDeathEndsTheWorldMode) {
+				const commands = [
+					'difficulty hard\n',
+					'scoreboard objectives add deaths deathCount\n',
+					'scoreboard objectives add health health\n',
+					'scoreboard objectives setdisplay list health\n',
+					'gamerule playersSleepingPercentage 1\n',
+				]
+				commands.forEach((c) => this.runCommand(c))
 			}
-		})
 
-		this.serverProcess.stdout!.on('data', (data: string) => {
-			const str = data.toString().trim()
-
-			if (!this.rconOnline && str.includes('Thread RCON Listener started')) {
-				this.rconOnline = true
-				log('Server-side RCON Online!')
-				this.connectToRcon()
+			if (this.options.onStart) {
+				this.options.onStart(this.serverProcess)
 			}
-		})
-
-		if (this.options.hardcoreButDeathEndsTheWorldMode) {
-			const commands = [
-				'difficulty hard\n',
-				'scoreboard objectives add deaths deathCount\n',
-				'scoreboard objectives add health health\n',
-				'scoreboard objectives setdisplay list health\n',
-				'gamerule playersSleepingPercentage 1\n',
-			]
-			commands.forEach((c) => this.runCommand(c))
-		}
-
-		if (this.options.onStart) {
-			this.options.onStart(this.serverProcess)
+		} catch (err) {
+			log('Error while starting server: ' + err + '\n')
 		}
 	}
 
