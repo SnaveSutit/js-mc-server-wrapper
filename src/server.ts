@@ -137,8 +137,9 @@ export class Server {
 					if (!result.includes('passed')) return
 					log('{red-fg}{bold}Death detected!{/bold}{/red-fg}')
 					clearInterval(intervalID)
+					this.rcon!.send('title @a title {"text": "Death detected!","color":"red"}')
 					this.rcon!.send(
-						'tellraw @a {"text": "Death detected! The server will reset in 10 seconds. Goodbye!","color":"red"}'
+						'title @a subtitle {"text": "The server will reset in 10 seconds. Goodbye!","color":"red"}'
 					)
 					setTimeout(() => {
 						this.stop().then(() => {
