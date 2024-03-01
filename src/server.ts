@@ -45,6 +45,7 @@ export class Server {
 				.spawn(startScript, {
 					cwd: this.options.root,
 					stdio: 'pipe',
+					shell: true,
 				})
 				.on('error', (err) => {
 					log('Error while starting server: ' + err + '\n')
