@@ -137,6 +137,7 @@ export class Server {
 					if (!result.includes('passed')) return
 					log('{red-fg}{bold}Death detected!{/bold}{/red-fg}')
 					clearInterval(intervalID)
+					this.rcon!.send('title @a times 20 120 20')
 					this.rcon!.send('title @a title {"text": "Death detected!","color":"red"}')
 					this.rcon!.send(
 						'title @a subtitle {"text": "The server will reset in 10 seconds. Goodbye!","color":"red"}'
