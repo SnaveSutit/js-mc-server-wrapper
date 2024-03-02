@@ -84,6 +84,8 @@ function getInput() {
 	}, 100)
 }
 
+let startTime = 0
+
 async function resetWorld(server: MinecraftServer) {
 	log('Backing up World...')
 	const worldPath = pathjs.join(server.options.rootFolder, 'world')
@@ -107,6 +109,79 @@ async function resetWorld(server: MinecraftServer) {
 	server.start()
 }
 
+async function showStats(server: OnlineMinecraftServer) {
+	await server.rcon.send('tellraw @a {"text": "Game Over!","color":"red"}')
+	await server.rcon.send('tellraw @a {"text": "This run\'s Stats:", "color":"red"}')
+	const timeSurvived = Math.floor(Date.now() - startTime)
+	let seconds = timeSurvived / 1000
+	let minutes = Math.floor(seconds / 60)
+	seconds = Math.floor(seconds % 60)
+	let hours = Math.floor(minutes / 60)
+	minutes = Math.floor(minutes % 60)
+	await server.rcon.send(
+		`tellraw @a [{"text": "You survived for ","color":"red"}, {"text": "${hours}:${minutes}:${seconds}","color":"aqua"}, {"text":"."}]`
+	)
+	// Kills
+	await server.rcon.send('execute as @a run scoreboard players operation #hc.kills i += @s kills')
+	await server.rcon.send(
+		'tellraw @a [{"text": "You killed ","color":"red"}, {"score":{"name":"#hc.kills","objective":"i"},"color":"aqua"}, {"text":" mobs."}]'
+	)
+	// Distance traveled
+	const distanceObjectives = [
+		'sneakTravel',
+		'walkTravel',
+		'sprintTravel',
+		'swimTravel',
+		'flyTravel',
+		'horseTravel',
+		'pigTravel',
+		'minecartTravel',
+		'striderTravel',
+		'walkOnWaterTravel',
+		'walkUnderWaterTravel',
+		'fallTravel',
+		'boatTravel',
+		'climbTravel',
+	]
+	for (const objective of distanceObjectives) {
+		await server.rcon.send(
+			`execute as @a run scoreboard players operation #hc.distance i += @s ${objective}`
+		)
+	}
+	await server.rcon.send('scoreboard players operation #hc.distance i /= 100 i')
+	await server.rcon.send(
+		'tellraw @a [{"text": "You traveled a total of ","color":"red"}, {"score":{"name":"#hc.distance","objective":"sneakTravel"},"color":"aqua"}, {"text":" blocks."}]'
+	)
+	// Damage dealt
+	await server.rcon.send(
+		'execute as @a run scoreboard players operation #hc.damageDealt i += @s damageDealt'
+	)
+	await server.rcon.send(
+		'tellraw @a [{"text": "You dealt ","color":"red"}, {"score":{"name":"#hc.damageDealt","objective":"i"},"color":"aqua"}, {"text":" damage."}]'
+	)
+	// Damage taken
+	await server.rcon.send(
+		'execute as @a run scoreboard players operation #hc.damageTaken i += @s damageTaken'
+	)
+	await server.rcon.send(
+		'tellraw @a [{"text": "You took ","color":"red"}, {"score":{"name":"#hc.damageTaken","objective":"i"},"color":"aqua"}, {"text":" damage."}]'
+	)
+	// Jumps
+	await server.rcon.send(
+		'execute as @a run scoreboard players operation #hc.jumps i += @s jumpCount'
+	)
+	await server.rcon.send(
+		'tellraw @a [{"text": "You jumped ","color":"red"}, {"score":{"name":"#hc.jumps","objective":"i"},"color":"aqua"}, {"text":" times."}]'
+	)
+	// Items dropped
+	await server.rcon.send(
+		'execute as @a run scoreboard players operation #hc.drops i += @s dropItem'
+	)
+	await server.rcon.send(
+		'tellraw @a [{"text": "You dropped ","color":"red"}, {"score":{"name":"#hc.drops","objective":"i"},"color":"aqua"}, {"text":" items."}]'
+	)
+}
+
 function watchForDeaths(server: OnlineMinecraftServer) {
 	let intervalID: NodeJS.Timeout
 
@@ -116,24 +191,33 @@ function watchForDeaths(server: OnlineMinecraftServer) {
 		await server.rcon.send('scoreboard players operation #hc.deathCount deaths > * deaths')
 		const result = await server.rcon.send('execute if score #hc.deathCount deaths matches 1..')
 		// log('Death check result: ' + result)
-		if (!(result.includes('passed') || result.includes('commands.execute.conditional.pass')))
-			return
+		if (!(result.includes('passed') || result.includes('commands.execute.conditional.pass'))) return
 		clearInterval(intervalID)
 		log('{red-fg}{bold}Death detected! Resetting server...{/bold}{/red-fg}')
-		server.rcon.send('title @a times 20 100 20')
-		server.rcon.send('title @a title {"text": "Death Detected!","color":"red"}')
-		server.rcon.send(
-			'title @a subtitle {"text": "The server will reset in 10 seconds. Goodbye!","color":"red"}'
+		await server.rcon.send('title @a times 20 100 20')
+		await server.rcon.send('title @a title {"text": "Game Over!","color":"red"}')
+		await server.rcon.send(
+			'title @a subtitle {"text": "You have failed. Now you will suffer.","color":"red"}'
 		)
-		server.rcon.send(
+		await server.rcon.send(
 			'execute as @a at @s run playsound minecraft:entity.wither.spawn player @s ~ ~ ~ 10 0.1'
 		)
+		await showStats(server)
+		// Count down 5 seconds before stopping the server
+		setTimeout(async () => {
+			for (let i = 0; i < 5; i++) {
+				await server.rcon.send(
+					`title @a actionbar {"text": "Server will stop in ${5 - i} seconds...","color":"red"}`
+				)
+				await new Promise(resolve => setTimeout(resolve, 1000))
+			}
+		}, 25000)
 		setTimeout(async () => {
 			await server.stop()
-			await resetWorld(server).catch((err) => {
+			await resetWorld(server).catch(err => {
 				log('Error while resetting world: ' + err)
 			})
-		}, 10000)
+		}, 31000)
 	}
 
 	intervalID = setInterval(async () => {
@@ -183,7 +267,8 @@ async function main() {
 			password: Math.random().toString(36).substring(2),
 			port: 25575,
 		},
-		onOnline: (server) => {
+		onOnline: server => {
+			startTime = Date.now()
 			log('Server Online!')
 			server.runCommand([
 				'difficulty hard',
@@ -191,6 +276,32 @@ async function main() {
 				'scoreboard objectives add health health',
 				'scoreboard objectives setdisplay list health',
 				'gamerule playersSleepingPercentage 1',
+				'scoreboard objectives add kills totalKillCount',
+				'scoreboard objectives add i dummy',
+				'scoreboard players set 100 i 100',
+				// Travel distance objectives
+				'scoreboard objectives add sneakTravel minecraft.custom:minecraft.crouch_one_cm',
+				'scoreboard objectives add walkTravel minecraft.custom:minecraft.walk_one_cm',
+				'scoreboard objectives add sprintTravel minecraft.custom:minecraft.sprint_one_cm',
+				'scoreboard objectives add swimTravel minecraft.custom:minecraft.swim_one_cm',
+				'scoreboard objectives add flyTravel minecraft.custom:minecraft.aviate_one_cm',
+				'scoreboard objectives add horseTravel minecraft.custom:minecraft.horse_one_cm',
+				'scoreboard objectives add pigTravel minecraft.custom:minecraft.pig_one_cm',
+				'scoreboard objectives add minecartTravel minecraft.custom:minecraft.minecart_one_cm',
+				'scoreboard objectives add striderTravel minecraft.custom:minecraft.strider_one_cm',
+				'scoreboard objectives add walkOnWaterTravel minecraft.custom:minecraft.strider_one_cm',
+				'scoreboard objectives add walkUnderWaterTravel minecraft.custom:minecraft.walk_under_water_one_cm',
+				// Special travel objectives
+				'scoreboard objectives add fallTravel minecraft.custom:minecraft.fall_one_cm',
+				'scoreboard objectives add boatTravel minecraft.custom:minecraft.boat_one_cm',
+				'scoreboard objectives add climbTravel minecraft.custom:minecraft.climb_one_cm',
+
+				'scoreboard objectives add jumpCount minecraft.custom:minecraft.jump',
+				'scoreboard objectives add dropItem minecraft.custom:minecraft.drop',
+				'scoreboard objectives add sneakTime minecraft.custom:minecraft.sneak_time',
+
+				'scoreboard objectives add damageDealt minecraft.custom:minecraft.damage_dealt',
+				'scoreboard objectives add damageTaken minecraft.custom:minecraft.damage_taken',
 			])
 			watchForDeaths(server)
 			setTimeout(() => {
@@ -211,7 +322,7 @@ async function main() {
 	await SERVER.start()
 }
 
-void main().catch((e) => {
+void main().catch(e => {
 	screen.destroy()
 	console.error(e)
 	process.exit(1)
