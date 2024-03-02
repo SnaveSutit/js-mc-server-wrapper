@@ -21,6 +21,10 @@ interface MinecraftServerOptions {
 		port: number
 	}
 	/**
+	 * Called before the server process is started
+	 */
+	beforeStartup?: (server: MinecraftServer) => void
+	/**
 	 * Called when the server process is started
 	 */
 	onStartup?: (serverProcess: ChildProcess) => void
@@ -66,10 +70,11 @@ export class MinecraftServer {
 		if (this._serverStarting) return Promise.reject('Server is already starting')
 		if (this.isOnline()) return Promise.reject('Server is already online')
 
-		return new Promise<void>((resolve) => {
+		return new Promise<void>(resolve => {
 			this._serverStarting = true
 			this._serverRconOnline = false
 			this._rconConnected = false
+			if (this.options.beforeStartup) this.options.beforeStartup(this)
 			this._configureRCON()
 
 			this.process = spawn(this.options.startupScript, {
@@ -77,16 +82,16 @@ export class MinecraftServer {
 				stdio: 'pipe',
 				shell: true,
 			})
-				.on('exit', (code) => {
+				.on('exit', code => {
 					this._onProcessExit(code || 0)
 				})
-				.on('error', (err) => {
+				.on('error', err => {
 					this._onProcessError(err)
 				})
-			this.process!.stdout!.on('data', (data) => {
+			this.process!.stdout!.on('data', data => {
 				this._onProcesSTDout(data)
 			})
-			this.process!.stderr!.on('data', (data) => {
+			this.process!.stderr!.on('data', data => {
 				this._onProcessSTDerr(data)
 			})
 			this._serverOnline = true
@@ -94,14 +99,14 @@ export class MinecraftServer {
 			if (this.options.onStartup) this.options.onStartup(this.process!)
 			this.log('Server process started!')
 			resolve()
-		}).catch((err) => {
+		}).catch(err => {
 			this.log('Failed to start server: ' + err)
 		})
 	}
 
 	public async stop() {
 		if (!this.isOnline()) return Promise.reject('Server is already offline')
-		return new Promise<void>((resolve) => {
+		return new Promise<void>(resolve => {
 			this.process!.on('exit', () => {
 				resolve()
 			})
@@ -112,7 +117,7 @@ export class MinecraftServer {
 	public async kill() {
 		if (!this.isOnline()) return Promise.reject('Server is already offline')
 		this.log('Killing server process...')
-		return new Promise<void>((resolve) => {
+		return new Promise<void>(resolve => {
 			this.process!.on('exit', () => {
 				resolve()
 			})
@@ -135,8 +140,7 @@ export class MinecraftServer {
 	}
 
 	public runCommand(command: string | string[]) {
-		if (!this.isOnline())
-			throw new Error('Tried to run a command on a server that is not online')
+		if (!this.isOnline()) throw new Error('Tried to run a command on a server that is not online')
 		if (Array.isArray(command)) {
 			this.write(command.join('\n') + '\n')
 			return
@@ -180,7 +184,7 @@ export class MinecraftServer {
 			host: 'localhost',
 			port: this.getProperty('rcon.port'),
 			password: this.getProperty('rcon.password'),
-		}).catch((err) => {
+		}).catch(err => {
 			this.log('Failed to connect to RCON: ' + err)
 		})
 		if (client) {

@@ -1,3 +1,3 @@
 - [ ] Hardcore but the world resets every death
-    - [ ] Add a run timer
-    - [ ] Add an in-game count for how many times the world has reset
+    - [x] Add a run timer
+    - [x] Add an in-game count for how many times the world has reset

@@ -2,9 +2,9 @@ import fs from 'fs'
 import pathjs from 'path'
 import blessed from 'blessed'
 import { getTimeFileName } from './util'
-import deathMessages from './minecraft/deathMessages'
 import { MinecraftServer, OnlineMinecraftServer } from './server'
 import zip from './7z'
+import { StatsFile } from './statsFile'
 
 let SERVER: MinecraftServer
 
@@ -85,6 +85,7 @@ function getInput() {
 }
 
 let startTime = 0
+const statsFile = new StatsFile()
 
 async function resetWorld(server: MinecraftServer) {
 	log('Backing up World...')
@@ -110,21 +111,28 @@ async function resetWorld(server: MinecraftServer) {
 }
 
 async function showStats(server: OnlineMinecraftServer) {
-	await server.rcon.send('tellraw @a {"text": "Game Over!","color":"red"}')
-	await server.rcon.send('tellraw @a {"text": "This run\'s Stats:", "color":"red"}')
+	await server.rcon.send('tellraw @a {"text": "--- Game Over! ---","color":"red"}')
+	await server.rcon.send('tellraw @a {"text": "This Run\'s Stats:", "color":"green"}')
 	const timeSurvived = Math.floor(Date.now() - startTime)
 	let seconds = timeSurvived / 1000
 	let minutes = Math.floor(seconds / 60)
 	seconds = Math.floor(seconds % 60)
 	let hours = Math.floor(minutes / 60)
 	minutes = Math.floor(minutes % 60)
+	let timeString = `${hours}:${minutes}:${seconds}`
+	if (hours === 0) {
+		timeString = `${minutes}:${seconds}`
+		if (minutes === 0) {
+			timeString = `${seconds} seconds`
+		}
+	}
 	await server.rcon.send(
-		`tellraw @a [{"text": "You survived for ","color":"red"}, {"text": "${hours}:${minutes}:${seconds}","color":"aqua"}, {"text":"."}]`
+		`tellraw @a [{"text": "- You survived for ","color":"red"}, {"text": "${timeString}","color":"aqua"}, {"text":"."}]`
 	)
 	// Kills
 	await server.rcon.send('execute as @a run scoreboard players operation #hc.kills i += @s kills')
 	await server.rcon.send(
-		'tellraw @a [{"text": "You killed ","color":"red"}, {"score":{"name":"#hc.kills","objective":"i"},"color":"aqua"}, {"text":" mobs."}]'
+		'tellraw @a [{"text": "- You killed ","color":"red"}, {"score":{"name":"#hc.kills","objective":"i"},"color":"aqua"}, {"text":" mobs."}]'
 	)
 	// Distance traveled
 	const distanceObjectives = [
@@ -150,35 +158,55 @@ async function showStats(server: OnlineMinecraftServer) {
 	}
 	await server.rcon.send('scoreboard players operation #hc.distance i /= 100 i')
 	await server.rcon.send(
-		'tellraw @a [{"text": "You traveled a total of ","color":"red"}, {"score":{"name":"#hc.distance","objective":"i"},"color":"aqua"}, {"text":" blocks."}]'
+		'tellraw @a [{"text": "- You traveled a total of ","color":"red"}, {"score":{"name":"#hc.distance","objective":"i"},"color":"aqua"}, {"text":" blocks."}]'
 	)
 	// Damage dealt
 	await server.rcon.send(
 		'execute as @a run scoreboard players operation #hc.damageDealt i += @s damageDealt'
 	)
 	await server.rcon.send(
-		'tellraw @a [{"text": "You dealt ","color":"red"}, {"score":{"name":"#hc.damageDealt","objective":"i"},"color":"aqua"}, {"text":" damage."}]'
+		'tellraw @a [{"text": "- You dealt ","color":"red"}, {"score":{"name":"#hc.damageDealt","objective":"i"},"color":"aqua"}, {"text":" damage."}]'
 	)
 	// Damage taken
 	await server.rcon.send(
 		'execute as @a run scoreboard players operation #hc.damageTaken i += @s damageTaken'
 	)
 	await server.rcon.send(
-		'tellraw @a [{"text": "You took ","color":"red"}, {"score":{"name":"#hc.damageTaken","objective":"i"},"color":"aqua"}, {"text":" damage."}]'
+		'tellraw @a [{"text": "- You took ","color":"red"}, {"score":{"name":"#hc.damageTaken","objective":"i"},"color":"aqua"}, {"text":" damage."}]'
 	)
 	// Jumps
 	await server.rcon.send(
 		'execute as @a run scoreboard players operation #hc.jumps i += @s jumpCount'
 	)
 	await server.rcon.send(
-		'tellraw @a [{"text": "You jumped ","color":"red"}, {"score":{"name":"#hc.jumps","objective":"i"},"color":"aqua"}, {"text":" times."}]'
+		'tellraw @a [{"text": "- You jumped ","color":"red"}, {"score":{"name":"#hc.jumps","objective":"i"},"color":"aqua"}, {"text":" times."}]'
 	)
 	// Items dropped
 	await server.rcon.send(
 		'execute as @a run scoreboard players operation #hc.drops i += @s dropItem'
 	)
 	await server.rcon.send(
-		'tellraw @a [{"text": "You dropped ","color":"red"}, {"score":{"name":"#hc.drops","objective":"i"},"color":"aqua"}, {"text":" items."}]'
+		'tellraw @a [{"text": "- You dropped ","color":"red"}, {"score":{"name":"#hc.drops","objective":"i"},"color":"aqua"}, {"text":" items."}]'
+	)
+	// Total Restarts
+	await server.rcon.send(
+		`tellraw @a [{"text": "The server has been reset ","color":"red"}, {"score":"${statsFile.deaths}", {"text":" times."}]`
+	)
+	// Total Time Played
+	let secondsPlayed = statsFile.totalTimePlayed / 1000
+	let minutesPlayed = Math.floor(secondsPlayed / 60)
+	secondsPlayed = Math.floor(secondsPlayed % 60)
+	let hoursPlayed = Math.floor(minutesPlayed / 60)
+	minutesPlayed = Math.floor(minutesPlayed % 60)
+	let timePlayedString = `${hoursPlayed}:${minutesPlayed}:${secondsPlayed}`
+	if (hoursPlayed === 0) {
+		timePlayedString = `${minutesPlayed}:${secondsPlayed}`
+		if (minutesPlayed === 0) {
+			timePlayedString = `${secondsPlayed} seconds`
+		}
+	}
+	await server.rcon.send(
+		`tellraw @a [{"text": "You have been playing HBDETW for ","color":"red"}, {"text": "${timePlayedString}","color":"aqua"}, {"text":"."}]`
 	)
 }
 
@@ -202,7 +230,13 @@ function watchForDeaths(server: OnlineMinecraftServer) {
 		await server.rcon.send(
 			'execute as @a at @s run playsound minecraft:entity.wither.spawn player @s ~ ~ ~ 10 0.1'
 		)
+
+		statsFile.read()
+		statsFile.deaths++
+		statsFile.totalTimePlayed += Date.now() - startTime
+		statsFile.write()
 		await showStats(server)
+
 		// Count down 5 seconds before stopping the server
 		for (let i = 0; i < 30; i++) {
 			await server.rcon.send(
@@ -253,7 +287,6 @@ async function main() {
 	getInput()
 
 	const startupScript = process.platform === 'win32' ? 'start.bat' : './start.sh'
-
 	SERVER = new MinecraftServer({
 		rootFolder: './server',
 		startupScript,
@@ -262,6 +295,9 @@ async function main() {
 		rcon: {
 			password: Math.random().toString(36).substring(2),
 			port: 25575,
+		},
+		beforeStartup: server => {
+			server.setProperty('hardcore', true)
 		},
 		onOnline: server => {
 			startTime = Date.now()
