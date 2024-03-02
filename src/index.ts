@@ -192,6 +192,10 @@ async function main() {
 				'gamerule playersSleepingPercentage 1',
 			])
 			watchForDeaths(server)
+			setTimeout(() => {
+				// From the fog config changes.
+				server.runCommand('scoreboard players set sightingChanceConfig ftf.configOptions 3')
+			}, 1000)
 		},
 		onShutdown: () => {
 			log('Server stopped!')
