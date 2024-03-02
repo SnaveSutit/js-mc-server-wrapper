@@ -206,7 +206,7 @@ function watchForDeaths(server: OnlineMinecraftServer) {
 		// Count down 5 seconds before stopping the server
 		for (let i = 0; i < 30; i++) {
 			await server.rcon.send(
-				`title @a actionbar {"text": "Server will stop in ${5 - i} seconds...","color":"red"}`
+				`title @a actionbar {"text": "Server will stop in ${30 - i} seconds...","color":"red"}`
 			)
 			await new Promise(resolve => setTimeout(resolve, 1000))
 		}
