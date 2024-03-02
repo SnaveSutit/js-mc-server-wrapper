@@ -194,7 +194,9 @@ async function main() {
 			watchForDeaths(server)
 			setTimeout(() => {
 				// From the fog config changes.
-				server.runCommand('scoreboard players set sightingChanceConfig ftf.configOptions 3')
+				server.runCommand('function watching:config/sighting_chance/3_rare')
+				server.runCommand('function watching:config/og_shrine/true')
+				server.runCommand('function watching:config/start_delay/remove')
 			}, 1000)
 		},
 		onShutdown: () => {
