@@ -116,7 +116,8 @@ function watchForDeaths(server: OnlineMinecraftServer) {
 		await server.rcon.send('scoreboard players operation #hc.deathCount deaths > * deaths')
 		const result = await server.rcon.send('execute if score #hc.deathCount deaths matches 1..')
 		// log('Death check result: ' + result)
-		if (!result.includes('passed')) return
+		if (!(result.includes('passed') || result.includes('commands.execute.conditional.pass')))
+			return
 		clearInterval(intervalID)
 		log('{red-fg}{bold}Death detected! Resetting server...{/bold}{/red-fg}')
 		server.rcon.send('title @a times 20 100 20')
