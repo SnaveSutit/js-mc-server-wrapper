@@ -150,7 +150,7 @@ async function showStats(server: OnlineMinecraftServer) {
 	}
 	await server.rcon.send('scoreboard players operation #hc.distance i /= 100 i')
 	await server.rcon.send(
-		'tellraw @a [{"text": "You traveled a total of ","color":"red"}, {"score":{"name":"#hc.distance","objective":"sneakTravel"},"color":"aqua"}, {"text":" blocks."}]'
+		'tellraw @a [{"text": "You traveled a total of ","color":"red"}, {"score":{"name":"#hc.distance","objective":"i"},"color":"aqua"}, {"text":" blocks."}]'
 	)
 	// Damage dealt
 	await server.rcon.send(
@@ -204,20 +204,16 @@ function watchForDeaths(server: OnlineMinecraftServer) {
 		)
 		await showStats(server)
 		// Count down 5 seconds before stopping the server
-		setTimeout(async () => {
-			for (let i = 0; i < 5; i++) {
-				await server.rcon.send(
-					`title @a actionbar {"text": "Server will stop in ${5 - i} seconds...","color":"red"}`
-				)
-				await new Promise(resolve => setTimeout(resolve, 1000))
-			}
-		}, 25000)
-		setTimeout(async () => {
-			await server.stop()
-			await resetWorld(server).catch(err => {
-				log('Error while resetting world: ' + err)
-			})
-		}, 31000)
+		for (let i = 0; i < 30; i++) {
+			await server.rcon.send(
+				`title @a actionbar {"text": "Server will stop in ${5 - i} seconds...","color":"red"}`
+			)
+			await new Promise(resolve => setTimeout(resolve, 1000))
+		}
+		await server.stop()
+		await resetWorld(server).catch(err => {
+			log('Error while resetting world: ' + err)
+		})
 	}
 
 	intervalID = setInterval(async () => {
