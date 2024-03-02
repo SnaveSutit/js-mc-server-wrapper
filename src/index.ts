@@ -188,9 +188,10 @@ async function showStats(server: OnlineMinecraftServer) {
 	await server.rcon.send(
 		'tellraw @a [{"text": "- You dropped ","color":"red"}, {"score":{"name":"#hc.drops","objective":"i"},"color":"aqua"}, {"text":" items."}]'
 	)
+	await server.rcon.send('tellraw @a {"text": "All Time Stats:", "color":"green"}')
 	// Total Restarts
 	await server.rcon.send(
-		`tellraw @a [{"text": "The server has been reset ","color":"red"}, {"score":"${statsFile.deaths}", {"text":" times."}]`
+		`tellraw @a [{"text": "- The server has been reset ","color":"red"}, {"text":"${statsFile.deaths}", {"text":" times."}]`
 	)
 	// Total Time Played
 	let secondsPlayed = statsFile.totalTimePlayed / 1000
@@ -206,7 +207,7 @@ async function showStats(server: OnlineMinecraftServer) {
 		}
 	}
 	await server.rcon.send(
-		`tellraw @a [{"text": "You have been playing HBDETW for ","color":"red"}, {"text": "${timePlayedString}","color":"aqua"}, {"text":"."}]`
+		`tellraw @a [{"text": "- You have been playing HBDETW for ","color":"red"}, {"text": "${timePlayedString}","color":"aqua"}, {"text":"."}]`
 	)
 }
 
