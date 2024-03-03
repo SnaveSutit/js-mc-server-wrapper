@@ -339,7 +339,6 @@ async function main() {
 			watchForDeaths(server)
 			setTimeout(() => {
 				// From the fog config changes.
-				server.runCommand('function watching:config/sighting_chance/3_rare')
 				server.runCommand('function watching:config/og_shrine/true')
 				server.runCommand('function watching:config/start_delay/off')
 			}, 1000)
